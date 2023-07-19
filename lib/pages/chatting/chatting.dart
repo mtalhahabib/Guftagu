@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:guftagu/constants/theme.dart';
+import 'package:rxdart/rxdart.dart';
 
 class Chatting extends StatefulWidget {
   String receiveId;
@@ -29,11 +32,16 @@ class _ChattingState extends State<Chatting> {
     super.initState();
   }
 
+
   @override
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      _scrollController.animateTo(_scrollController.position.maxScrollExtent,
+        duration: Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
     });
+
 
     return Container(
       decoration: BoxDecoration(
@@ -47,13 +55,14 @@ class _ChattingState extends State<Chatting> {
           ),
           Expanded(
               child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('chats')
-                .where('senderId', isEqualTo: widget.sendId)
-                .where('receiverId', isEqualTo: widget.receiveId)
-                .orderBy('timestamp', descending: true)
-                .snapshots(),
-            builder: (context, snapshot) {
+            stream:combinedStream(widget.sendId,widget.receiveId), 
+            // FirebaseFirestore.instance
+            //     .collection('chats')
+            //     .where('senderId', isEqualTo: widget.sendId)
+            //     .where('receiverId', isEqualTo: widget.receiveId)
+            //     .orderBy('timestamp', descending: true)
+            //     .snapshots(),
+            builder: (BuildContext context,AsyncSnapshot<QuerySnapshot> snapshot) {
               if (snapshot.hasError) {
                 return Center(child: Text('${snapshot.error}'));
                 print(snapshot.error);
@@ -190,9 +199,7 @@ class _ChattingState extends State<Chatting> {
 }
 
 void sendMessage(String? senderId, String? receiverId, String? message) {
-  print(senderId);
-  print(receiverId);
-  print(message);
+  
   // Create a reference to the "chats" collection
   CollectionReference chatsCollection =
       FirebaseFirestore.instance.collection('chats');
@@ -215,5 +222,63 @@ void sendMessage(String? senderId, String? receiverId, String? message) {
   }).catchError((error) {
     // Error occurred while sending the message
     print('Error sending message: $error');
+  });
+}
+
+Stream<QuerySnapshot<Object?>>? combinedStream(sendId,receiveId){
+
+// Query 1: where senderId = widget.sendId and receiverId = widget.receiveId
+  final query1 = FirebaseFirestore.instance
+      .collection('chats')
+      .where('senderId', isEqualTo: sendId)
+      .where('receiverId', isEqualTo: receiveId)
+      .orderBy('timestamp', descending: true)
+      .snapshots();
+
+// Query 2: where senderId = widget.receiveId and receiverId = widget.sendId
+  final query2 = FirebaseFirestore.instance
+      .collection('chats')
+      .where('senderId', isEqualTo: receiveId)
+      .where('receiverId', isEqualTo: sendId)
+      .orderBy('timestamp', descending: true)
+      .snapshots();
+
+// Combine the results of both queries
+  Stream<QuerySnapshot<Object?>>? combinedStream =
+      Rx.combineLatest2(query1, query2, (query1Snapshot, query2Snapshot) {
+    // Process and merge the snapshots from both queries
+    // For example, you can merge the documents and sort them based on the timestamp
+    final mergedDocuments = [...query1Snapshot.docs, ...query2Snapshot.docs];
+    mergedDocuments.sort((a, b) => b['timestamp'].compareTo(a['timestamp']));
+
+    return QuerySnapshot<Object?>(
+      docs: mergedDocuments,
+      size: mergedDocuments.length,
+      empty: mergedDocuments.isEmpty,
+      metadata: query1Snapshot.metadata,
+    );
+  }).asBroadcastStream();
+
+
+
+
+
+}
+
+
+
+
+
+class QuerySnapshot<T> {
+  final List<T> docs;
+  final int size;
+  final bool empty;
+  final dynamic metadata;
+
+  QuerySnapshot({
+    required this.docs,
+    required this.size,
+    required this.empty,
+    required this.metadata,
   });
 }
