@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:guftagu/pages/home.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants/theme.dart';
 
@@ -177,7 +178,9 @@ class _ProfilePageState extends State<ProfilePage> {
                         color: color.yellow,
                       ),
                       child: TextButton(
-                        onPressed: () {
+                        onPressed: () async {
+                          SharedPreferences prefs = await SharedPreferences.getInstance();
+            prefs.setBool('isLoggedIn', true);
                           uploadInfo();
                         },
                         child: Text(

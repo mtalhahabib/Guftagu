@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:guftagu/pages/home.dart';
 import 'package:guftagu/pages/profile.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../constants/theme.dart';
 
@@ -25,8 +26,11 @@ class _VerificationScreenState extends State<VerificationScreen> {
           .doc(currentUser.uid)
           .get();
       if (userProfile.exists) {
+                                      SharedPreferences prefs = await SharedPreferences.getInstance();
+        prefs.setBool('isLoggedIn', true);
         // User profile exists, redirect to profile screen
         Navigator.of(context).pushReplacement(
+          
           MaterialPageRoute(
             builder: (context) => HomeScreen(user: currentUser),
           ),
@@ -66,13 +70,14 @@ class _VerificationScreenState extends State<VerificationScreen> {
               decoration: InputDecoration(
                 hintText: 'Enter 6 Digits OTP',
                 suffixIcon: IconButton(
-                  onPressed: () {
+                  onPressed: () async {
                     try {
                       final credential = PhoneAuthProvider.credential(
                           verificationId: widget.verificationId,
                           smsCode: smsController.text);
                       FirebaseAuth.instance.signInWithCredential(credential);
-
+SharedPreferences prefs = await SharedPreferences.getInstance();
+            prefs.setBool('isLoggedIn', true);
                       redirectProfileScreen(context);
                     } on FirebaseAuthException catch (e) {
                       // if you want to show the message in the app, use

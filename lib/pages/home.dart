@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:guftagu/pages/splash.dart';
 import 'package:guftagu/pages/widgets/widget_list.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants/theme.dart';
 
@@ -52,7 +53,9 @@ class _HomeScreenState extends State<HomeScreen> {
           }
 
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return CircularProgressIndicator(color: color.yellow,);
+            return CircularProgressIndicator(
+              color: color.yellow,
+            );
           }
 
           if (snapshot.hasData && snapshot.data!.exists) {
@@ -62,8 +65,8 @@ class _HomeScreenState extends State<HomeScreen> {
             String lastName = data['lastName'];
             return WillPopScope(
               onWillPop: () async {
-                // Disable the back button functionality
-                return false;
+                SystemNavigator.pop();
+                return true;
               },
               child: Scaffold(
                 backgroundColor: color.black,
@@ -87,6 +90,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ).then((value) async {
                             if (value == 'signOut') {
+                              SharedPreferences prefs =
+                                  await SharedPreferences.getInstance();
+                              prefs.setBool('isLoggedIn', false);
                               await FirebaseAuth.instance.signOut();
                               Navigator.of(context).pushReplacement(
                                 MaterialPageRoute(

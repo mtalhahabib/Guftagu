@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -32,16 +33,17 @@ class _ChattingState extends State<Chatting> {
     super.initState();
   }
 
-
   @override
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollController.animateTo(_scrollController.position.maxScrollExtent,
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
         duration: Duration(milliseconds: 300),
         curve: Curves.easeOut,
       );
     });
 
+// Query 1: where senderId = widget.sendId and receiverId = widget.receiveId
 
     return Container(
       decoration: BoxDecoration(
@@ -55,14 +57,15 @@ class _ChattingState extends State<Chatting> {
           ),
           Expanded(
               child: StreamBuilder<QuerySnapshot>(
-            stream:combinedStream(widget.sendId,widget.receiveId), 
+            stream: combinedStream(widget.sendId, widget.receiveId),
             // FirebaseFirestore.instance
             //     .collection('chats')
             //     .where('senderId', isEqualTo: widget.sendId)
             //     .where('receiverId', isEqualTo: widget.receiveId)
             //     .orderBy('timestamp', descending: true)
             //     .snapshots(),
-            builder: (BuildContext context,AsyncSnapshot<QuerySnapshot> snapshot) {
+            builder:
+                (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
               if (snapshot.hasError) {
                 return Center(child: Text('${snapshot.error}'));
                 print(snapshot.error);
@@ -72,7 +75,6 @@ class _ChattingState extends State<Chatting> {
                 final currentUserId = FirebaseAuth.instance.currentUser!.uid;
 
                 return ListView.builder(
-                  controller: _scrollController,
                   reverse: true,
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
@@ -178,9 +180,12 @@ class _ChattingState extends State<Chatting> {
                 ),
                 IconButton(
                     onPressed: () {
-                      sendMessage(widget.sendId, widget.receiveId, _chat.text);
-
-                      _chat.clear();
+                      if (_chat.text.isNotEmpty) {
+                        sendMessage(
+                            widget.sendId, widget.receiveId, _chat.text);
+                            _chat.clear();
+   
+                      }
                     },
                     icon: CircleAvatar(
                       backgroundColor: color.yellow,
@@ -198,14 +203,19 @@ class _ChattingState extends State<Chatting> {
   }
 }
 
-void sendMessage(String? senderId, String? receiverId, String? message) {
-  
+void sendMessage(String? senderId, String? receiverId, String? message,
+ 
+) {
+  print(senderId);
+  print(receiverId);
+  print(message);
   // Create a reference to the "chats" collection
   CollectionReference chatsCollection =
       FirebaseFirestore.instance.collection('chats');
 
   // Create a new document with an auto-generated ID
   DocumentReference newMessageRef = chatsCollection.doc();
+  
 
   // Create a map representing the message data
   Map<String, dynamic> messageData = {
@@ -225,9 +235,7 @@ void sendMessage(String? senderId, String? receiverId, String? message) {
   });
 }
 
-Stream<QuerySnapshot<Object?>>? combinedStream(sendId,receiveId){
-
-// Query 1: where senderId = widget.sendId and receiverId = widget.receiveId
+Stream<QuerySnapshot<Object?>>? combinedStream(sendId, receiveId) {
   final query1 = FirebaseFirestore.instance
       .collection('chats')
       .where('senderId', isEqualTo: sendId)
@@ -259,15 +267,10 @@ Stream<QuerySnapshot<Object?>>? combinedStream(sendId,receiveId){
     );
   }).asBroadcastStream();
 
-
-
-
-
+// Convert the stream to nullable type
+  Stream<QuerySnapshot<Object?>>? nullableStream = combinedStream;
+  return combinedStream;
 }
-
-
-
-
 
 class QuerySnapshot<T> {
   final List<T> docs;
