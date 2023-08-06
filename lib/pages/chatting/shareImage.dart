@@ -9,25 +9,24 @@ import 'package:rxdart/rxdart.dart';
 
 import 'helping_func.dart';
 
-class Chatting extends StatefulWidget {
+class ShareImage extends StatefulWidget {
   String receiveId;
   String sendId;
 
-  Chatting(this.receiveId, this.sendId);
+  ShareImage(this.receiveId, this.sendId);
 
   @override
-  State<Chatting> createState() => _ChattingState();
+  State<ShareImage> createState() => _ChattingState();
 }
 
-class _ChattingState extends State<Chatting> {
+class _ChattingState extends State<ShareImage> {
   Rang color = Rang();
-  TextEditingController _chat = TextEditingController();
   ScrollController _scrollController = ScrollController();
- 
-  bool bool_chat = false;
+  File? imageFile;
+  String? imgUrl;
   void dispose() {
     _scrollController.dispose();
-    _chat.dispose();
+
     super.dispose();
   }
 
@@ -36,7 +35,21 @@ class _ChattingState extends State<Chatting> {
     super.initState();
   }
 
-  
+  Future<void> uploadUrl() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() {
+        imageFile = File(pickedFile.path);
+      });
+    }
+
+    String imgUrl = await uploadImage(imageFile) as String;
+    print(imgUrl);
+    sendImage(widget.sendId, widget.receiveId, imgUrl);
+  }
+
   @override
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -59,7 +72,7 @@ class _ChattingState extends State<Chatting> {
           ),
           Expanded(
               child: StreamBuilder<QuerySnapshot>(
-            stream: combinedStream(widget.sendId, widget.receiveId),
+            stream: imageStream(widget.sendId, widget.receiveId),
             // FirebaseFirestore.instance
             //     .collection('chats')
             //     .where('senderId', isEqualTo: widget.sendId)
@@ -84,10 +97,10 @@ class _ChattingState extends State<Chatting> {
                         messages[index].data() as Map<String, dynamic>;
                     final senderId = message['senderId'] as String;
                     final receiverId = message['receiverId'] as String;
-                    final messageText = message['message'] as String;
-                    
-                    
-                    // Determine whether the message is sent by the sender or receiver
+                    final url = message['imageurl'] as String;
+
+                    //
+                    //e message is sent by the sender or receiver
                     final isSenderMessage = senderId == currentUserId;
 
                     // Determine the alignment of the chat message based on the sender/receiver
@@ -98,32 +111,42 @@ class _ChattingState extends State<Chatting> {
                     // Determine the background color of the chat message based on the sender/receiver
                     final backgroundColor =
                         isSenderMessage ? color.receiverText : color.senderText;
-  
-                    return Padding(
-                      padding: const EdgeInsets.fromLTRB(16.0, 0.0, 16.0, 0.0),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        crossAxisAlignment: alignment,
-                        children: [
-                          Container(
-                            constraints: BoxConstraints(
-                              maxWidth:
-                                  MediaQuery.of(context).size.width * 0.70,
-                            ),
-                            padding: EdgeInsets.all(8.0),
-                            decoration: BoxDecoration(
-                              color: backgroundColor,
-                              borderRadius: BorderRadius.circular(8.0),
-                            ),
-                            child: Text(
-                              messageText,
-                              style: TextStyle(
-                                color: color.black,
+                    // Display the chat message with appropriate alignment and background color
+
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => Image.network(url)));
+                      },
+                      child: Padding(
+                        padding:
+                            const EdgeInsets.fromLTRB(16.0, 0.0, 16.0, 0.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          crossAxisAlignment: alignment,
+                          children: [
+                            Container(
+                              constraints: BoxConstraints(
+                                maxWidth:
+                                    MediaQuery.of(context).size.width * 0.70,
+                              ),
+                              padding: EdgeInsets.all(8.0),
+                              decoration: BoxDecoration(
+                                color: backgroundColor,
+                                borderRadius: BorderRadius.circular(8.0),
+                              ),
+                              child: Image.network(
+                                url,
+                                width: 200,
+                                height: 200,
+                                fit: BoxFit.cover,
                               ),
                             ),
-                          ),
-                          SizedBox(height: 8.0),
-                        ],
+                            SizedBox(height: 8.0),
+                          ],
+                        ),
                       ),
                     );
                   },
@@ -138,67 +161,24 @@ class _ChattingState extends State<Chatting> {
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Container(
-              height: 64,
               decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(164),
+                  color: Colors.grey[400],
+                  borderRadius: BorderRadius.circular(30),
                   border: Border.all(color: color.scrollBar, width: 1)),
-              child: Row(children: [
+              child:
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 IconButton(
+                    alignment: Alignment.center,
                     onPressed: () {
-
-  
+                      uploadUrl();
                     },
                     icon: CircleAvatar(
                       backgroundColor: color.yellow,
                       child: Icon(
-                        Icons.add,
+                        Icons.upload,
                         color: color.black,
                       ),
                     )),
-                Expanded(
-                  child: TextField(
-                    maxLines: null, // Allow multiple lines of text
-                    keyboardType:
-                        TextInputType.multiline, // Enable multiline keyboard
-                    textInputAction: TextInputAction.newline,
-                    controller: _chat,
-                    onChanged: ((value) {
-                      if (value.isNotEmpty) {
-                        setState(() {
-                          bool_chat = true;
-                        });
-                      } else {
-                        setState(() {
-                          bool_chat = false;
-                        });
-                      }
-                    }),
-                    decoration: InputDecoration(
-                        border: InputBorder.none,
-                        hintText: 'Type message',
-                        hintStyle: TextStyle(
-                          color: color.description,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
-                        )),
-                  ),
-                ),
-                IconButton(
-                    onPressed: () {
-                                         sendMessage(
-                        widget.sendId,
-                        widget.receiveId,
-                        _chat.text,
-                      );
-                      _chat.clear();
-                    },
-                    icon: CircleAvatar(
-                      backgroundColor: color.yellow,
-                      child: Icon(
-                        bool_chat ? Icons.send : (Icons.mic),
-                        color: color.black,
-                      ),
-                    ))
               ]),
             ),
           )
