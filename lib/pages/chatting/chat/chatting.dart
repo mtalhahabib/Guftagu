@@ -59,7 +59,7 @@ class _ChattingState extends State<Chatting> {
           ),
           Expanded(
               child: StreamBuilder<QuerySnapshot>(
-            stream: combinedStream(widget.sendId, widget.receiveId),
+            stream: dataStream(widget.sendId, widget.receiveId,'chats'),
             // FirebaseFirestore.instance
             //     .collection('chats')
             //     .where('senderId', isEqualTo: widget.sendId)

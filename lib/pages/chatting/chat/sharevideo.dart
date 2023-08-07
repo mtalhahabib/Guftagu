@@ -5,49 +5,51 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:guftagu/constants/theme.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:rxdart/rxdart.dart';
-
+import 'package:video_player/video_player.dart';
+import 'package:chewie/chewie.dart';
 import 'helping_func.dart';
 
-class ShareImage extends StatefulWidget {
+class ShareVideo extends StatefulWidget {
   String receiveId;
   String sendId;
 
-  ShareImage(this.receiveId, this.sendId);
+  ShareVideo(this.receiveId, this.sendId);
 
   @override
-  State<ShareImage> createState() => _ChattingState();
+  State<ShareVideo> createState() => _ChattingState();
 }
 
-class _ChattingState extends State<ShareImage> {
+class _ChattingState extends State<ShareVideo> {
   Rang color = Rang();
   ScrollController _scrollController = ScrollController();
-  File? imageFile;
-  String? imgUrl;
-  void dispose() {
-    _scrollController.dispose();
-
-    super.dispose();
-  }
+  
+  File? videoFile;
+  String? videoUrl;
 
   @override
   void initState() {
     super.initState();
   }
 
+  void dispose() {
+    _scrollController.dispose();
+
+    super.dispose();
+  }
+
   Future<void> uploadUrl() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    final pickedFile = await picker.pickVideo(source: ImageSource.gallery);
 
     if (pickedFile != null) {
       setState(() {
-        imageFile = File(pickedFile.path);
+        videoFile = File(pickedFile.path);
       });
     }
 
-    String imgUrl = await uploadImage(imageFile) as String;
-    print(imgUrl);
-    sendImage(widget.sendId, widget.receiveId, imgUrl);
+    String videoUrl = await uploadVideo(videoFile) as String;
+    print(videoUrl);
+    sendVideo(widget.sendId, widget.receiveId, videoUrl);
   }
 
   @override
@@ -72,7 +74,7 @@ class _ChattingState extends State<ShareImage> {
           ),
           Expanded(
               child: StreamBuilder<QuerySnapshot>(
-            stream: imageStream(widget.sendId, widget.receiveId),
+            stream: dataStream(widget.sendId, widget.receiveId, 'sharevideo'),
             // FirebaseFirestore.instance
             //     .collection('chats')
             //     .where('senderId', isEqualTo: widget.sendId)
@@ -97,7 +99,7 @@ class _ChattingState extends State<ShareImage> {
                         messages[index].data() as Map<String, dynamic>;
                     final senderId = message['senderId'] as String;
                     final receiverId = message['receiverId'] as String;
-                    final url = message['imageurl'] as String;
+                    final url = message['videourl'] as String;
 
                     //
                     //e message is sent by the sender or receiver
@@ -112,13 +114,23 @@ class _ChattingState extends State<ShareImage> {
                     final backgroundColor =
                         isSenderMessage ? color.receiverText : color.senderText;
                     // Display the chat message with appropriate alignment and background color
-
+                    final videoPlayerController =VideoPlayerController.networkUrl(Uri.parse(url));
+                    final chewieController = ChewieController(
+                      videoPlayerController: videoPlayerController,
+                      autoInitialize: true,
+                      looping: false,
+                      showControls: true,
+                      // You can customize other Chewie options here
+                    );
                     return GestureDetector(
                       onTap: () {
                         Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => Image.network(url)));
+                                builder: (context) => Chewie(controller: chewieController),
+       
+                                )
+                                );
                       },
                       child: Padding(
                         padding:
@@ -131,17 +143,18 @@ class _ChattingState extends State<ShareImage> {
                               constraints: BoxConstraints(
                                 maxWidth:
                                     MediaQuery.of(context).size.width * 0.70,
+                                                                    maxHeight:
+                                    MediaQuery.of(context).size.width * 0.70,
                               ),
                               padding: EdgeInsets.all(8.0),
+                              
                               decoration: BoxDecoration(
+                              
                                 color: backgroundColor,
                                 borderRadius: BorderRadius.circular(8.0),
                               ),
-                              child: Image.network(
-                                url,
-                                width: 200,
-                                height: 200,
-                                fit: BoxFit.cover,
+                              child: Chewie(
+                                controller: chewieController,
                               ),
                             ),
                             SizedBox(height: 8.0),
