@@ -1,4 +1,4 @@
-# گفتگو 
+#                                                                   گفتگو 
 Welcome to Guftagu, where the magic of poetic Urdu intertwines with modern messaging, creating an enchanting chat application 
 like no other.
 
